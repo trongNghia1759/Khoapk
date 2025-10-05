@@ -1,0 +1,247 @@
+* {
+
+  margin: 0;
+
+  padding: 0;
+
+  box-sizing: border-box;
+
+}
+
+
+
+body, * {
+
+  user-select: none;
+
+  outline: none !important;
+
+}
+
+
+
+html, body {
+
+  height: 100%;
+
+  width: 100%;
+
+  overflow: hidden;
+
+  background-image: url('bgrct1.png');
+
+  background-size: cover;
+
+  background-position: center;
+
+  background-repeat: no-repeat;
+
+  cursor: none;
+
+}
+
+
+
+.container {
+
+  display: flex;
+
+  justify-content: space-between;
+
+  align-items: center;
+
+  height: 100vh;
+
+  padding: 0 50px;
+
+  position: relative;
+
+}
+
+
+
+.left, .right {
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  position: relative;
+
+}
+
+
+
+.left img {
+
+  max-width: 50%;
+
+  max-height: 80vh;
+
+  object-fit: contain;
+
+  transition: transform 0.2s linear;
+
+  pointer-events: none;
+
+}
+
+
+
+.right img {
+
+  max-width: 30%;
+
+  max-height: 80vh;
+
+  border-radius: 50%;
+
+  object-fit: contain;
+
+  transition: transform 0.2s linear;
+
+  pointer-events: none;
+
+}
+
+
+
+#muiten {
+
+  position: absolute;
+
+  top: 50%;
+
+  left: 50%;
+
+  width: 700px;
+
+  display: none;
+
+  pointer-events: none;
+
+  transform: translate(-50%, -50%) rotate(0deg);
+
+  transform-origin: center center;
+
+  z-index: 99999;
+
+}
+
+
+
+.arrow {
+
+  position: absolute;
+
+  pointer-events: none;
+
+  transform-origin: center center;
+
+  transform: translate(-50%, -50%) rotate(0deg);
+
+}
+
+
+
+#message {
+
+  position: fixed;
+
+  top: 30%;
+
+  left: 50%;
+
+  transform: translate(-50%, -50%);
+
+  font-size: 60px;
+
+  font-family: 'Anton', sans-serif;
+
+  display: none;
+
+  z-index: 100000;
+
+  animation: explode 1.5s ease-out forwards;
+
+  white-space: nowrap;
+
+}
+
+
+
+@keyframes explode {
+
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5) rotate(0deg); }
+
+  20% { opacity: 1; transform: translate(-50%, -50%) scale(1.5) rotate(3deg); }
+
+  50% { transform: translate(-50%, -50%) scale(1.2) rotate(-3deg); }
+
+  80% { transform: translate(-50%, -50%) scale(1) rotate(1deg); }
+
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(0.8) rotate(0deg); }
+
+}
+
+
+
+@keyframes shake {
+
+  0% { transform: translate(0px, 0px) rotate(0deg); }
+
+  20% { transform: translate(-3px, 2px) rotate(-1deg); }
+
+  40% { transform: translate(3px, -2px) rotate(1deg); }
+
+  60% { transform: translate(-2px, 2px) rotate(0deg); }
+
+  80% { transform: translate(2px, -1px) rotate(1deg); }
+
+  100% { transform: translate(0px, 0px) rotate(0deg); }
+
+}
+
+
+
+.shake {
+
+  animation: shake 0.4s;
+
+}
+
+
+
+.explosion {
+
+  position: absolute;
+
+  width: 100px;
+
+  height: 100px;
+
+  background: radial-gradient(circle, #ffcc00 0%, #ff0000 60%, transparent 80%);
+
+  border-radius: 50%;
+
+  opacity: 0.9;
+
+  pointer-events: none;
+
+  animation: explodeEffect 0.5s ease-out forwards;
+
+  z-index: 999999;
+
+}
+
+
+
+@keyframes explodeEffect {
+
+  0% { transform: scale(0.5); opacity: 1; }
+
+  100% { transform: scale(2.5); opacity: 0; }
+
+}
