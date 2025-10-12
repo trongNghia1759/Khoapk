@@ -7,15 +7,16 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
 
     <style>
-        /* --- PHẦN CSS --- */
-        :root {
-            --primary-color: #6a11cb;
-            --secondary-color: #2575fc;
-            --background-color: #f0f2f5;
+        /* --- PHẦN CSS (KHÔNG THAY ĐỔI) --- */
+               :root {
+            --primary-color: #E91E63; /* Màu hồng đậm */
+            --secondary-color: #F06292; /* Màu hồng nhạt hơn */
+            --background-color: #f0f2f5; /* Giữ nguyên nền xám nhạt */
             --card-background: #ffffff;
             --text-color: #333;
             --shadow-color: rgba(0, 0, 0, 0.1);
         }
+        
 
         body {
             font-family: 'Roboto', sans-serif;
@@ -204,7 +205,7 @@
             background-color: #dc3545;
         }
 
-        /* --- PHẦN CSS CHO RESPONSIVE --- */
+        /* --- PHẦN CSS CHO RESPONSIVE (KHÔNG THAY ĐỔI) --- */
         @media (max-width: 768px) {
             body {
                 padding: 10px;
@@ -368,7 +369,7 @@
     </div>
 
     <script>
-        // --- PHẦN JAVASCRIPT ---
+        // --- PHẦN JAVASCRIPT ĐÃ CẬP NHẬT ---
         document.addEventListener('DOMContentLoaded', () => {
             const balanceElement = document.getElementById('balance');
             const productCards = document.querySelectorAll('.product-card');
@@ -377,6 +378,8 @@
             const notification = document.getElementById('notification');
 
             let currentBalance = 0;
+            // ✅ THÊM MỚI: Mảng để lưu trữ các mã đã sử dụng
+            let usedCodes = []; 
 
             // Các mã code hợp lệ và số tiền tương ứng
             const validCodes = {
@@ -395,14 +398,26 @@
             function saveBalance() {
                 localStorage.setItem('userBalance', currentBalance);
             }
+            
+            // ✅ THÊM MỚI: Hàm lưu danh sách mã đã dùng vào localStorage
+            function saveUsedCodes() {
+                localStorage.setItem('usedCodes', JSON.stringify(usedCodes));
+            }
 
-            // Hàm tải số dư từ localStorage khi trang được load
-            function loadBalance() {
+            // ✅ CẬP NHẬT: Hàm tải dữ liệu từ localStorage khi trang được load
+            function loadData() {
+                // Tải số dư
                 const savedBalance = localStorage.getItem('userBalance');
                 if (savedBalance !== null) {
                     currentBalance = parseInt(savedBalance, 10);
                 }
                 updateBalanceDisplay();
+
+                // Tải danh sách mã đã dùng
+                const savedCodes = localStorage.getItem('usedCodes');
+                if (savedCodes !== null) {
+                    usedCodes = JSON.parse(savedCodes);
+                }
             }
             
             // Hàm hiển thị thông báo
@@ -426,48 +441,53 @@
 
                 buyBtn.addEventListener('click', () => {
                     if (currentBalance >= price) {
-                        // Đủ tiền
                         currentBalance -= price;
                         saveBalance();
                         updateBalanceDisplay();
                         showNotification('Thanh toán thành công! Đang chuyển hướng...', 'success');
                         
-                        // Chuyển hướng đến link mua hàng sau 2 giây
                         setTimeout(() => {
                             window.location.href = link;
                         }, 2000);
 
                     } else {
-                        // Không đủ tiền
                         showNotification('Số dư của bạn không đủ để thực hiện giao dịch này!', 'error');
                     }
                 });
             });
 
-            // Xử lý sự kiện khi nhấn nút Nạp tiền
+            // ✅ CẬP NHẬT: Xử lý sự kiện khi nhấn nút Nạp tiền
             redeemBtn.addEventListener('click', () => {
                 const code = codeInput.value.trim().toUpperCase();
                 
-                // ✅ SỬA LỖI TẠI ĐÂY: Dùng "in" để kiểm tra sự tồn tại của key
-                // thay vì kiểm tra giá trị của nó.
+                // Bước 1: Kiểm tra mã có hợp lệ không
                 if (code in validCodes) {
-                    const amount = validCodes[code];
-                    currentBalance += amount;
-                    saveBalance();
-                    updateBalanceDisplay();
-                    // Thêm toLocaleString để hiển thị số tiền đẹp hơn
-                    showNotification(`Nạp thành công ${amount.toLocaleString('vi-VN')}$!`, 'success');
-                    codeInput.value = ''; // Xóa nội dung trong ô nhập
-                    
-                    // Để tránh nạp lại, có thể xóa mã đã dùng (tùy chọn)
-                    // delete validCodes[code]; 
+                    // Bước 2: Kiểm tra xem mã đã được sử dụng trên thiết bị này chưa
+                    if (usedCodes.includes(code)) {
+                        // Nếu đã có trong danh sách, báo lỗi
+                        showNotification('Mã này đã được sử dụng trên thiết bị này.', 'error');
+                    } else {
+                        // Nếu chưa được sử dụng -> Tiến hành nạp tiền
+                        const amount = validCodes[code];
+                        currentBalance += amount;
+                        saveBalance();
+                        updateBalanceDisplay();
+
+                        // Thêm mã vào danh sách đã dùng và lưu lại
+                        usedCodes.push(code);
+                        saveUsedCodes();
+                        
+                        showNotification(`Nạp thành công ${amount.toLocaleString('vi-VN')}$!`, 'success');
+                        codeInput.value = '';
+                    }
                 } else {
-                    showNotification('Mã code không hợp lệ hoặc đã được sử dụng.', 'error');
+                    // Nếu mã không tồn tại trong validCodes
+                    showNotification('Mã code không hợp lệ.', 'error');
                 }
             });
 
-            // Tải số dư khi trang được mở lần đầu
-            loadBalance();
+            // Tải số dư và danh sách mã đã dùng khi trang được mở
+            loadData();
         });
     </script>
 </body>
