@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset=utf-8>
+<meta name=viewport content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Galaxia V3</title>
+<style>
+body,html{margin:0;height:100%;background:#000;overflow:hidden}
+canvas{display:block}
+.player{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);width:90%;max-width:600px;display:flex;align-items:center;gap:10px;padding:10px;border:2px solid #f60;border-radius:999px;background:0 0;box-shadow:0 0 15px #f60,0 0 30px #f30;z-index:1000;font-family:Arial,sans-serif;color:#fff;font-size:14px}
+.player button{background:0 0;border:none;color:#fff;font-size:22px;cursor:pointer;filter:drop-shadow(0 0 6px #ff6600);transition:transform .2s}
+.player button:hover{transform:scale(1.2);filter:drop-shadow(0 0 10px #ff3300)}
+.progress{flex-grow:1;height:14px;background:rgba(255,255,255,.12);border-radius:999px;overflow:hidden;cursor:pointer;position:relative}
+.progress-bar{height:100%;width:0%;background:linear-gradient(270deg,#f60,#f30,#f09,#f60);background-size:400% 400%;border-radius:999px;box-shadow:0 0 10px #f60;animation:flowing 6s ease infinite}
+@keyframes flowing{0%{background-position:0 50%}50%{background-position:100% 50%}100%{background-position:0 50%}}
+.time{min-width:74px;text-align:right;font-size:12px;color:#fff;text-shadow:0 0 5px #f60}
+</style>
+</head>
+<body>
+<canvas id=c></canvas>
+
+<!-- 🔊 Trình phát nhạc -->
+<div class=player>
+  <button id=play>▶️</button>
+  <div class=progress id=progress><div class=progress-bar id=progress-bar></div></div>
+  <div class=time id=time>0:00 / 0:00</div>
+</div>
+
+<audio id=audio loop>
+  <source src="anhthuongemnhatma.mp3" type=audio/mpeg>
+</audio>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.148.0/build/three.min.js"></script>
+
+<script>
+/* ==== CÀI NHẠC ==== */
+const audio=document.getElementById("audio"),
+playBtn=document.getElementById("play"),
+progress=document.getElementById("progress"),
+progressBar=document.getElementById("progress-bar"),
+timeDisplay=document.getElementById("time");
+let isPlaying=!1;
+
+function formatTime(e){if(!isFinite(e))return"0:00";return Math.floor(e/60)+":"+Math.floor(e%60).toString().padStart(2,"0")}
+
+playBtn.addEventListener("click",async()=>{
+  if(isPlaying){audio.pause();playBtn.textContent="▶️";}
+  else{await audio.play();playBtn.textContent="⏸️";}
+  isPlaying=!isPlaying;
+});
+
+audio.addEventListener("timeupdate",()=>{
+  const e=audio.currentTime/audio.duration*100;
+  progressBar.style.width=(isFinite(e)?e:0)+"%";
+  timeDisplay.textContent=formatTime(audio.currentTime)+" / "+formatTime(audio.duration);
+});
+
+progress.addEventListener("click",e=>{
+  const t=progress.getBoundingClientRect();
+  const n=(e.clientX-t.left)/t.width;
+  if(isFinite(audio.duration))audio.currentTime=n*audio.duration;
+});
+
+/* ==== CẢNH QUAN ==== */
+const canvas=document.getElementById("c"),
+renderer=new THREE.WebGLRenderer({canvas:canvas,antialias:!0});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+renderer.setSize(innerWidth,innerHeight);
+
+const scene=new THREE.Scene;
+const camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,.1,5000);
+let targetDist=300,currentDist=300,rotX=.2,rotY=0;
+
+const loader=new THREE.TextureLoader;
+const nebulaTex=loader.load("https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/cube/space/px.jpg");
+scene.background=nebulaTex;
+
+/* ==== SAO ==== */
+(function(e=2000,t=3000){
+  const n=new THREE.BufferGeometry,a=new Float32Array(3*e);
+  for(let n=0;n<e;n++){
+    const e=t*(.3+.7*Math.random()),r=Math.random()*Math.PI*2,i=Math.acos(2*Math.random()-1);
+    a[3*n]=e*Math.sin(i)*Math.cos(r);
+    a[3*n+1]=e*Math.cos(i);
+    a[3*n+2]=e*Math.sin(i)*Math.sin(r);
+  }
+  n.setAttribute("position",new THREE.BufferAttribute(a,3));
+  scene.add(new THREE.Points(n,new THREE.PointsMaterial({size:1.5,color:0xffffff,depthWrite:!1})));
+})();
+
+/* ==== TRUNG TÂM ==== */
+const coreMat=new THREE.MeshPhongMaterial({color:0x111111,transparent:!0,opacity:.6,shininess:200}),
+core=new THREE.Mesh(new THREE.SphereGeometry(40,64,64),coreMat);
+scene.add(core);
+
+function makeCenterTextTexture(e){
+  const t=document.createElement("canvas");
+  t.width=512;t.height=512;
+  const n=t.getContext("2d");
+  n.font="bold 80px Arial";n.textAlign="center";n.textBaseline="middle";
+  n.fillStyle="#ff0033";n.shadowColor="#ff66aa";n.shadowBlur=50;
+  n.fillText(e,t.width/2,t.height/2);
+  return new THREE.CanvasTexture(t);
+}
+
+const centerTex=makeCenterTextTexture("GALAXIA ❤️");
+const centerMat=new THREE.SpriteMaterial({map:centerTex,transparent:!0});
+const centerSprite=new THREE.Sprite(centerMat);
+centerSprite.scale.set(60,60,1);
+scene.add(centerSprite);
+
+/* ==== VÒNG SÁNG ==== */
+function makeGlow(e=768,t="255,160,0",n="255,60,0"){
+  const a=document.createElement("canvas");
+  a.width=a.height=e;
+  const r=a.getContext("2d"),i=r.createRadialGradient(e/2,e/2,.05*e,e/2,e/2,.5*e);
+  i.addColorStop(0,"rgba("+t+",0.9)");
+  i.addColorStop(.5,"rgba("+n+",0.5)");
+  i.addColorStop(1,"rgba(0,0,0,0)");
+  r.fillStyle=i;r.fillRect(0,0,e,e);
+  return new THREE.CanvasTexture(a);
+}
+
+const glow=new THREE.Sprite(new THREE.SpriteMaterial({
+  map:makeGlow(768,"255,120,255","255,0,150"), // 💜 tím hồng
+  transparent:!0,
+  depthWrite:!1
+}));
+glow.scale.set(500,500,1);
+scene.add(glow);
+
+/* ==== VÒNG RING ==== */
+function ringTexture(e=768){
+  const t=document.createElement("canvas");
+  t.width=t.height=e;
+  const n=t.getContext("2d");
+  n.translate(e/2,e/2);
+  const a=.34*e,r=.49*e,i=n.createRadialGradient(0,0,.3*a,0,0,r);
+  i.addColorStop(0,"rgba(255,255,200,1)");
+  i.addColorStop(.3,"rgba(255,160,60,0.9)");
+  i.addColorStop(.65,"rgba(255,80,0,0.6)");
+  i.addColorStop(1,"rgba(0,0,0,0)");
+  n.fillStyle=i;
+  n.beginPath();
+  n.arc(0,0,r,0,2*Math.PI);
+  n.arc(0,0,a,0,2*Math.PI,!0);
+  n.closePath();
+  n.fill();
+  return new THREE.CanvasTexture(t);
+}
+const ring1=new THREE.Mesh(new THREE.RingGeometry(60,80,128),new THREE.MeshBasicMaterial({map:ringTexture(),transparent:!0,side:THREE.DoubleSide}));
+const ring2=new THREE.Mesh(new THREE.RingGeometry(85,100,128),new THREE.MeshBasicMaterial({map:ringTexture(),transparent:!0,side:THREE.DoubleSide,opacity:.6}));
+ring1.rotation.x=ring2.rotation.x=Math.PI/2;
+scene.add(ring1);scene.add(ring2);
+
+/* ==== DANH SÁCH TÊN ==== */
+const WORDS=[
+"Nhớ Em","Thương Em","Mê Em","Thương Cậu","dtn1759_","_dtn1759","_dtn1759_","Love You","Miss You"
+];
+
+/* ==== ẢNH ==== */
+// 👉 Thay các link ảnh thật của bạn vào đây
+const IMAGE_URLS = [
+  "a1.png",
+  "a2 png",
+  "a3.png",
+  "a4.png",
+  "a5.png"
+];
+
+/* ==== HÀM VẼ ẢNH + CHỮ ==== */
+async function makeTextTexture(text, shadowColor){
+  const canvas=document.createElement("canvas");
+  canvas.width=768; canvas.height=128;
+  const ctx=canvas.getContext("2d");
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  const img=new Image();
+  img.crossOrigin="Anonymous";
+
+  // 🔁 Nếu có ảnh riêng thì dùng, nếu không thì ngẫu nhiên
+  const src=IMAGE_MAP[text] || IMAGE_URLS[Math.floor(Math.random()*IMAGE_URLS.length)];
+  const imagePromise=new Promise(resolve=>{
+    img.onload=resolve;
+    img.src=src;
+  });
+
+  await imagePromise;
+  ctx.drawImage(img,0,0,128,128);
+
+  ctx.font="bold 60px Arial";
+  ctx.textAlign="center";
+  ctx.textBaseline="middle";
+  ctx.fillStyle="#fff";
+  ctx.shadowColor=shadowColor;
+  ctx.shadowBlur=30;
+
+  const textX=128+(canvas.width-128)/2;
+  ctx.fillText(text,textX,canvas.height/2);
+
+  return new THREE.CanvasTexture(canvas);
+}
+
+const COLORS=["#ff66ff","#66ccff","#ffd36b","#ff9966","#8df59a","#ffa0f8","#c6a7ff","#ff4444","#44ff99","#99ccff"];
+const textGroup=new THREE.Group();
+scene.add(textGroup);
+
+/* ==== TẠO SPRITE ==== */
+(async function createTextSprites(){
+  for(let e=0;e<WORDS.length;e++){
+    const texture=await makeTextTexture(WORDS[e],COLORS[e%COLORS.length]);
+    const mat=new THREE.SpriteMaterial({map:texture,transparent:!0});
+    const sprite=new THREE.Sprite(mat);
+    sprite.scale.set(96,16,1);
+    const r=Math.acos(2*Math.random()-1),i=Math.random()*Math.PI*2,o=150+120*Math.random();
+    sprite.position.set(o*Math.sin(r)*Math.cos(i),o*Math.cos(r),o*Math.sin(r)*Math.sin(i));
+    sprite.userData={phi:r,theta:i,radius:o,speed:.001+.001*Math.random()};
+    textGroup.add(sprite);
+  }
+})();
+
+/* ==== XOAY, ZOOM ==== */
+let dragging=!1,lastX=0,lastY=0;
+function onDown(e){dragging=!0;const t=e.touches?e.touches[0]:e;lastX=t.clientX;lastY=t.clientY;}
+function onMove(e){if(!dragging)return;const t=e.touches?e.touches[0]:e;const n=(t.clientX-lastX)/innerWidth;const a=(t.clientY-lastY)/innerHeight;rotY-=3*n;rotX=Math.max(-1.2,Math.min(1.2,rotX-2.2*a));lastX=t.clientX;lastY=t.clientY;}
+function onUp(){dragging=!1;}
+addEventListener("mousedown",onDown);
+addEventListener("mousemove",onMove);
+addEventListener("mouseup",onUp);
+addEventListener("touchstart",onDown,{passive:!0});
+addEventListener("touchmove",onMove,{passive:!0});
+addEventListener("touchend",onUp,{passive:!0});
+addEventListener("wheel",e=>{targetDist+=.25*e.deltaY;targetDist=Math.max(160,Math.min(600,targetDist));},{passive:!0});
+
+/* ==== CHUYỂN ĐỘNG ==== */
+let t=0;
+function tick(){
+  requestAnimationFrame(tick);
+  t+=.01;
+  ring1.rotation.z+=.002;
+  ring2.rotation.z-=.0015;
+  glow.scale.set(500*(1+.03*Math.sin(.4*t)),500*(1+.03*Math.sin(.4*t)),1);
+  const e=1+.05*Math.sin(3*t);
+  core.scale.set(e,e,e);
+  textGroup.children.forEach(e=>{
+    e.material.opacity=.8+.2*Math.sin(2*t);
+    e.userData.theta+=e.userData.speed;
+    e.position.x=e.userData.radius*Math.sin(e.userData.phi)*Math.cos(e.userData.theta);
+    e.position.z=e.userData.radius*Math.sin(e.userData.phi)*Math.sin(e.userData.theta);
+  });
+  currentDist+=.06*(targetDist-currentDist);
+  const n=Math.cos(rotX),a=Math.sin(rotX),r=Math.cos(rotY),i=Math.sin(rotY);
+  camera.position.set(currentDist*i*n,currentDist*a,currentDist*r*n);
+  camera.lookAt(0,0,0);
+  renderer.render(scene,camera);
+}
+tick();
+</script>
+</body>
+</html>
